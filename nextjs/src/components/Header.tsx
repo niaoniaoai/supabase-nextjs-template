@@ -65,7 +65,7 @@ export default function Header() {
                 <span className="text-sm font-medium text-gray-700">
                   {currentUser.name}
                   <span className="ml-1 text-xs text-gray-400">
-                    ({currentUser.role === 'admin' ? '管理员' : '普通用户'})
+                    ({currentUser.type === 'administrator' ? '管理员' : '普通用户'})
                   </span>
                 </span>
                 <button

@@ -2,31 +2,40 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase'; // ✅ 统一使用 src/lib/supabase.ts 路径
+import { supabase } from '@/lib/supabase';
 
 interface Post {
   id: string;
   title: string;
   content: string;
+  category?: string;
   author_name?: string;
   is_pinned?: boolean;
   created_at?: string;
 }
 
+const CATEGORIES = ['全部', 'AI与机器学习', '自媒体与视觉', '综合讨论'];
+
 export default function HomePage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState('全部');
 
   useEffect(() => {
     const fetchPosts = async () => {
       setLoading(true);
       try {
-        // 从 Supabase 数据库拉取帖子（优先按置顶状态，其次按创建时间降序）
-        const { data, error } = await supabase
+        let query = supabase
           .from('posts')
           .select('*')
           .order('is_pinned', { ascending: false })
           .order('created_at', { ascending: false });
+
+        if (selectedCategory !== '全部') {
+          query = query.eq('category', selectedCategory);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
           console.error('拉取帖子失败:', error.message);
@@ -41,17 +50,36 @@ export default function HomePage() {
     };
 
     fetchPosts();
-  }, []);
+  }, [selectedCategory]);
 
   return (
     <main className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6 text-gray-800">最新帖子</h1>
+      {/* 分类筛选器 Tabs */}
+      <div className="flex gap-2 mb-6 border-b pb-3 overflow-x-auto">
+        {CATEGORIES.map((category) => (
+          <button
+            key={category}
+            onClick={() => setSelectedCategory(category)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${
+              selectedCategory === category
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {category}
+          </button>
+        ))}
+      </div>
+
+      <h1 className="text-2xl font-bold mb-6 text-gray-800">
+        {selectedCategory === '全部' ? '最新帖子' : `${selectedCategory} 分类帖子`}
+      </h1>
 
       {loading ? (
         <div className="text-center py-12 text-gray-500">正在加载帖子...</div>
       ) : posts.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
-          暂无帖子，点击右上角的“+ 发布帖子”开始创作吧！
+          该分类下暂无帖子，点击右上角“+ 发布帖子”开始创作吧！
         </div>
       ) : (
         <div className="space-y-4">
@@ -67,6 +95,11 @@ export default function HomePage() {
                     📌 置顶
                   </span>
                 )}
+                {post.category && (
+                  <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs font-medium rounded">
+                    {post.category}
+                  </span>
+                )}
                 <h2 className="text-lg font-bold text-gray-900 hover:text-blue-600 transition">
                   {post.title}
                 </h2>
@@ -75,7 +108,7 @@ export default function HomePage() {
                 {post.content}
               </p>
               <div className="text-xs text-gray-400">
-                作者：{post.author_name || '匿名'}
+                作者：{post.author_name || '艾先生'}
               </div>
             </Link>
           ))}

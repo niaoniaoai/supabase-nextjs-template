@@ -86,7 +86,7 @@ export default function HomePage() {
           {posts.map((post) => (
             <Link
               key={post.id}
-              href={`/posts/${post.id}`}
+              href={`/post/${post.id}`}
               className="block p-5 bg-white border border-gray-200 rounded-lg hover:shadow-md transition"
             >
               <div className="flex items-center gap-2 mb-2">

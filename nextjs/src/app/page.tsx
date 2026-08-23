@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { User } from '@supabase/supabase-js'
+import Link from 'next/link'
 
 interface Post {
   id: number
@@ -36,11 +37,9 @@ export default function ForumHome() {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
 
-      // 拉取分类
       const { data: catData } = await supabase.from('categories').select('*')
       if (catData) setCategories(catData)
 
-      // 拉取帖子
       let query = supabase
         .from('posts')
         .select('*, categories(name)')
@@ -57,6 +56,13 @@ export default function ForumHome() {
     fetchData()
   }, [selectedCategory, supabase])
 
+  // 退出登录处理函数
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    setUser(null)
+    window.location.reload()
+  }
+
   return (
     <main className="max-w-4xl mx-auto p-6 space-y-6">
       <header className="border-b pb-4 flex justify-between items-center">
@@ -64,24 +70,30 @@ export default function ForumHome() {
           <h1 className="text-3xl font-bold">社区讨论论坛</h1>
           <p className="text-gray-500 text-sm mt-1">发现精彩内容与深度讨论</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           {user ? (
             <>
-              <a
+              <Link
                 href="/new-post"
                 className="px-4 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 text-sm"
               >
                 + 发布新帖
-              </a>
+              </Link>
               <span className="text-xs text-gray-500">{user.email}</span>
+              <button
+                onClick={handleLogout}
+                className="px-3 py-1.5 border rounded text-xs hover:bg-red-50 text-red-600 transition"
+              >
+                退出登录
+              </button>
             </>
           ) : (
-            <a
+            <Link
               href="/login"
               className="px-4 py-2 bg-zinc-800 text-white rounded font-medium text-sm"
             >
               去登录
-            </a>
+            </Link>
           )}
         </div>
       </header>
@@ -134,24 +146,24 @@ export default function ForumHome() {
                       {post.categories.name}
                     </span>
                   )}
-                  <a
+                  <Link
                     href={`/post/${post.id}`}
                     className="text-lg font-semibold hover:underline"
                   >
                     {post.title}
-                  </a>
+                  </Link>
                 </div>
                 <p className="text-xs text-gray-400">
                   作者：{post.author_email || '匿名'} | 发布时间：
                   {new Date(post.created_at).toLocaleString('zh-CN')}
                 </p>
               </div>
-              <a
+              <Link
                 href={`/post/${post.id}`}
                 className="text-sm text-blue-600 hover:underline shrink-0 ml-4"
               >
                 查看详情 &rarr;
-              </a>
+              </Link>
             </article>
           ))
         )}

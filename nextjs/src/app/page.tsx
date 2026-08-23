@@ -1,226 +1,161 @@
-import React from 'react';
-import Link from 'next/link';
-import { ArrowRight, Globe, Shield, Users, Key, Database, Clock } from 'lucide-react';
-import AuthAwareButtons from '@/components/AuthAwareButtons';
-import HomePricing from "@/components/HomePricing";
+'use client'
 
-export default function Home() {
-  const productName = process.env.NEXT_PUBLIC_PRODUCTNAME;
+import { useState, useEffect } from 'react'
+import { createClient } from '@/utils/supabase/client'
 
-  const features = [
-    {
-      icon: Shield,
-      title: 'Robust Authentication',
-      description: 'Secure login with email/password, Multi-Factor Authentication, and SSO providers',
-      color: 'text-green-600'
-    },
-    {
-      icon: Database,
-      title: 'File Management',
-      description: 'Built-in file storage with secure sharing, downloads, and granular permissions',
-      color: 'text-orange-600'
-    },
-    {
-      icon: Users,
-      title: 'User Settings',
-      description: 'Complete user management with password updates, MFA setup, and profile controls',
-      color: 'text-red-600'
-    },
-    {
-      icon: Clock,
-      title: 'Task Management',
-      description: 'Built-in todo system with real-time updates and priority management',
-      color: 'text-teal-600'
-    },
-    {
-      icon: Globe,
-      title: 'Legal Documents',
-      description: 'Pre-configured privacy policy, terms of service, and refund policy pages',
-      color: 'text-purple-600'
-    },
-    {
-      icon: Key,
-      title: 'Cookie Consent',
-      description: 'GDPR-compliant cookie consent system with customizable preferences',
-      color: 'text-blue-600'
+interface Post {
+  id: number
+  title: string
+  content: string
+  author_email: string
+  created_at: string
+}
+
+export default function ForumHome() {
+  const [posts, setPosts] = useState<Post[]>([])
+  const [title, setTitle] = useState('')
+  const [content, setContent] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [user, setUser] = useState<any>(null)
+
+  const supabase = createClient()
+
+  // 获取当前登录状态与帖子列表
+  useEffect(() => {
+    async function fetchData() {
+      // 获取当前用户
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+
+      // 拉取所有帖子（按时间倒序排列）
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (!error && data) {
+        setPosts(data)
+      }
     }
-  ];
+    fetchData()
+  }, [])
 
-  const stats = [
-    { label: 'Active Users', value: '10K+' },
-    { label: 'Organizations', value: '2K+' },
-    { label: 'Countries', value: '50+' },
-    { label: 'Uptime', value: '99.9%' }
-  ];
+  // 发布新帖子
+  const handleCreatePost = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!title.trim() || !content.trim()) return
+
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('posts')
+      .insert([
+        {
+          title,
+          content,
+          user_id: user.id,
+          author_email: user.email,
+        },
+      ])
+      .select()
+
+    setLoading(false)
+
+    if (error) {
+      alert('发帖失败: ' + error.message)
+    } else {
+      setTitle('')
+      setContent('')
+      if (data) setPosts([data[0], ...posts])
+    }
+  }
 
   return (
-      <div className="min-h-screen">
-        <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-sm z-50 border-b border-gray-100">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-16 items-center">
-              <div className="flex-shrink-0">
-              <span className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">
-                {productName}
-              </span>
-              </div>
-              <div className="hidden md:flex items-center space-x-8">
-                <Link href="#features" className="text-gray-600 hover:text-gray-900">
-                  Features
-                </Link>
-
-                <Link href="#pricing" className="text-gray-600 hover:text-gray-900">
-                  Pricing
-                </Link>
-                <Link
-                    href="https://github.com/Razikus/supabase-nextjs-template"
-                    className="text-gray-600 hover:text-gray-900"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                  Documentation
-                </Link>
-
-                <Link
-                    href="https://github.com/Razikus/supabase-nextjs-template"
-                    className="bg-primary-800 text-white px-4 py-2 rounded-lg hover:bg-primary-900 transition-colors"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                  Grab This Template
-                </Link>
-
-                <AuthAwareButtons variant="nav" />
-              </div>
-            </div>
+    <main className="max-w-4xl mx-auto p-6">
+      <header className="mb-8 border-b pb-4 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">社区讨论论坛</h1>
+          <p className="text-gray-500 mt-1">欢迎在社区分享你的观点和想法</p>
+        </div>
+        {user ? (
+          <div className="text-right text-sm">
+            <p className="text-gray-600">已登录</p>
+            <p className="font-semibold">{user.email}</p>
           </div>
-        </nav>
+        ) : (
+          <a
+            href="/login"
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium"
+          >
+            去登录发帖
+          </a>
+        )}
+      </header>
 
-        <section className="relative pt-32 pb-24 overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center">
-              <h1 className="text-5xl md:text-6xl font-bold tracking-tight">
-                Bootstrap Your SaaS
-                <span className="block text-primary-600">In 5 minutes</span>
-              </h1>
-              <p className="mt-6 text-xl text-gray-600 max-w-3xl mx-auto">
-                Launch your SaaS product in days, not months. Complete with authentication and enterprise-grade security built right in.
-              </p>
-              <div className="mt-10 flex gap-4 justify-center">
-
-                <AuthAwareButtons />
-              </div>
+      {/* 发帖区域（仅登录用户可见） */}
+      {user ? (
+        <section className="bg-white dark:bg-zinc-900 p-6 rounded-lg border mb-10 shadow-sm">
+          <h2 className="text-xl font-bold mb-4">发表新讨论</h2>
+          <form onSubmit={handleCreatePost} className="space-y-4">
+            <div>
+              <input
+                type="text"
+                placeholder="请输入帖子标题..."
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+                className="w-full p-2.5 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent"
+              />
             </div>
-          </div>
-        </section>
-
-        <section className="py-16 bg-gradient-to-b from-white to-gray-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              {stats.map((stat, index) => (
-                  <div key={index} className="text-center">
-                    <div className="text-4xl font-bold text-primary-600">{stat.value}</div>
-                    <div className="mt-2 text-sm text-gray-600">{stat.label}</div>
-                  </div>
-              ))}
+            <div>
+              <textarea
+                placeholder="分享你的想法或问题..."
+                rows={4}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                required
+                className="w-full p-2.5 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent"
+              />
             </div>
-          </div>
-        </section>
-
-        {/* Features Section */}
-        <section id="features" className="py-24 bg-gray-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold">Everything You Need</h2>
-              <p className="mt-4 text-xl text-gray-600">
-                Built with modern technologies for reliability and speed
-              </p>
-            </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {features.map((feature, index) => (
-                  <div
-                      key={index}
-                      className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <feature.icon className={`h-8 w-8 ${feature.color}`} />
-                    <h3 className="mt-4 text-xl font-semibold">{feature.title}</h3>
-                    <p className="mt-2 text-gray-600">{feature.description}</p>
-                  </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <HomePricing />
-
-        <section className="py-24 bg-primary-600">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-3xl font-bold text-white">
-              Ready to Transform Your Idea into Reality?
-            </h2>
-            <p className="mt-4 text-xl text-primary-100">
-              Join thousands of developers building their SaaS with {productName}
-            </p>
-            <Link
-                href="/auth/register"
-                className="mt-8 inline-flex items-center px-6 py-3 rounded-lg bg-white text-primary-600 font-medium hover:bg-primary-50 transition-colors"
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-6 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 disabled:opacity-50"
             >
-              Get Started Now
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Link>
-          </div>
+              {loading ? '发布中...' : '发布帖子'}
+            </button>
+          </form>
         </section>
+      ) : (
+        <div className="p-4 border rounded bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-200 mb-8 text-center">
+          请先登录账号，即可发表新讨论或参与回复。
+        </div>
+      )}
 
-        <footer className="bg-gray-50 border-t border-gray-200">
-          <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900">Product</h4>
-                <ul className="mt-4 space-y-2">
-                  <li>
-                    <Link href="#features" className="text-gray-600 hover:text-gray-900">
-                      Features
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="#pricing" className="text-gray-600 hover:text-gray-900">
-                      Pricing
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900">Resources</h4>
-                <ul className="mt-4 space-y-2">
-                  <li>
-                    <Link href="https://github.com/Razikus/supabase-nextjs-template" className="text-gray-600 hover:text-gray-900">
-                      Documentation
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900">Legal</h4>
-                <ul className="mt-4 space-y-2">
-                  <li>
-                    <Link href="/legal/privacy" className="text-gray-600 hover:text-gray-900">
-                      Privacy
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/legal/terms" className="text-gray-600 hover:text-gray-900">
-                      Terms
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-            </div>
-            <div className="mt-8 pt-8 border-t border-gray-200">
-              <p className="text-center text-gray-600">
-                © {new Date().getFullYear()} {productName}. All rights reserved.
+      {/* 帖子列表展示 */}
+      <section className="space-y-6">
+        <h2 className="text-2xl font-bold">最新讨论列表 ({posts.length})</h2>
+        {posts.length === 0 ? (
+          <p className="text-gray-500 text-center py-8">暂无帖子，快来抢沙发吧！</p>
+        ) : (
+          posts.map((post) => (
+            <article
+              key={post.id}
+              className="p-6 bg-white dark:bg-zinc-900 border rounded-lg shadow-sm space-y-3"
+            >
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                {post.title}
+              </h3>
+              <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line leading-relaxed">
+                {post.content}
               </p>
-            </div>
-          </div>
-        </footer>
-      </div>
-  );
+              <div className="text-xs text-gray-400 flex justify-between items-center border-t pt-3">
+                <span>发布者：{post.author_email || '匿名用户'}</span>
+                <span>{new Date(post.created_at).toLocaleString('zh-CN')}</span>
+              </div>
+            </article>
+          ))
+        )}
+      </section>
+    </main>
+  )
 }

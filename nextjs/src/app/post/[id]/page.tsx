@@ -4,6 +4,7 @@ import { useState, useEffect, use } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { User } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 interface Post {
   id: number
@@ -137,9 +138,9 @@ export default function PostDetailPage({
 
   return (
     <main className="max-w-4xl mx-auto p-6 space-y-8">
-      <a href="/" className="text-sm text-blue-600 hover:underline">
+      <Link href="/" className="text-sm text-blue-600 hover:underline">
         &larr; 返回帖子列表
-      </a>
+      </Link>
 
       <article className="border-b pb-6 space-y-4">
         {isEditing ? (

@@ -63,12 +63,11 @@ export default function Header() {
               {/* 用户信息与退出按钮 */}
               <div className="flex items-center gap-3 pl-2 border-l border-gray-200">
                 <span className="text-sm font-medium text-gray-700">
-                  {currentUser.name}
-                  <span className="ml-1 text-xs text-gray-400">
-// 加上 ?. 变成 currentUser?.type
-({currentUser?.type === 'administrator' ? '管理员' : '普通用户'})
-                  </span>
-                </span>
+{currentUser.name}
+<span className="ml-1 text-xs text-gray-400">
+  ({currentUser?.type === 'administrator' ? '管理员' : '普通用户'})
+</span>
+<button
                 <button
                   onClick={handleLogout}
                   className="text-sm text-red-600 hover:text-red-800 transition"

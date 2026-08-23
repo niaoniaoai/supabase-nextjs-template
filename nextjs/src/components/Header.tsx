@@ -67,7 +67,7 @@ export default function Header({ currentUser, onLogout }: HeaderProps) {
           ) : (
             <div className="flex items-center gap-3">
               <Link
-                href="/login"
+                href="/auth/login"
                 className="text-sm font-medium text-gray-600 hover:text-gray-900 transition"
               >
                 登录

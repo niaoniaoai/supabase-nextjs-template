@@ -72,19 +72,20 @@ export default function PostDetailPage({
     fetchData()
   }, [id, supabase])
 
-  // 前台删帖
+  // 删帖
   const handleDeletePost = async () => {
     if (!confirm('确定要删除此帖子吗？此操作不可撤销。')) return
     const { error } = await supabase.from('posts').delete().eq('id', id)
     if (error) {
-      alert('删除失败: ' + error.message)
+      alert('删除失败，请检查数据库权限或是否为管理员账户: ' + error.message)
     } else {
       alert('帖子已成功删除！')
       router.push('/')
+      router.refresh()
     }
   }
 
-  // 修改保存帖子
+  // 保存编辑
   const handleSaveEdit = async () => {
     const { error } = await supabase
       .from('posts')
@@ -96,9 +97,11 @@ export default function PostDetailPage({
     } else {
       if (post) setPost({ ...post, title: editTitle, content: editContent })
       setIsEditing(false)
+      alert('帖子修改成功！')
     }
   }
 
+  // 置顶 / 取消置顶
   const togglePin = async () => {
     if (!post) return
     const nextStatus = !post.is_pinned
@@ -107,7 +110,12 @@ export default function PostDetailPage({
       .update({ is_pinned: nextStatus })
       .eq('id', post.id)
 
-    if (!error) setPost({ ...post, is_pinned: nextStatus })
+    if (error) {
+      alert('置顶操作失败: ' + error.message)
+    } else {
+      setPost({ ...post, is_pinned: nextStatus })
+      alert(nextStatus ? '已成功置顶！' : '已取消置顶！')
+    }
   }
 
   const handleAddComment = async (e: React.FormEvent) => {
@@ -152,7 +160,7 @@ export default function PostDetailPage({
               className="w-full p-2 border rounded font-bold text-xl"
             />
             <textarea
-              rows={8}
+              rows={10}
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
               className="w-full p-2 border rounded font-mono text-sm"
@@ -160,7 +168,7 @@ export default function PostDetailPage({
             <div className="flex gap-2">
               <button
                 onClick={handleSaveEdit}
-                className="px-4 py-1.5 bg-blue-600 text-white rounded text-sm"
+                className="px-4 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
               >
                 保存修改
               </button>
@@ -175,8 +183,15 @@ export default function PostDetailPage({
         ) : (
           <>
             <div className="flex justify-between items-start">
-              <h1 className="text-3xl font-bold">{post.title}</h1>
-              <div className="flex gap-2">
+              <h1 className="text-3xl font-bold flex items-center gap-2">
+                {post.is_pinned && (
+                  <span className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded font-bold">
+                    置顶
+                  </span>
+                )}
+                {post.title}
+              </h1>
+              <div className="flex gap-2 shrink-0">
                 <button
                   onClick={togglePin}
                   className="text-xs px-2.5 py-1 border rounded hover:bg-zinc-100 dark:hover:bg-zinc-800"
@@ -201,9 +216,10 @@ export default function PostDetailPage({
               发布者：{post.author_email || '匿名'} | 时间：
               {new Date(post.created_at).toLocaleString('zh-CN')}
             </p>
-            {/* 渲染富文本与上传的图片 */}
+
+            {/* 支持链接与图片富文本渲染 */}
             <div
-              className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-line space-y-4 pt-2"
+              className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-line space-y-4 pt-2 prose dark:prose-invert max-w-none"
               dangerouslySetInnerHTML={{ __html: post.content }}
             />
           </>

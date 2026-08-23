@@ -20,8 +20,8 @@ interface Post {
 export default function PostDetailPage({ params }: { params?: { id: string } }) {
   const router = useRouter();
 
-  // 1. 帖子数据状态（实际项目中请换成你的接口/数据源）
-  const [post, setPost] = useState<Post>({
+  // 1. 帖子数据状态（移除了未使用的 setPost）
+  const [post] = useState<Post>({
     id: params?.id || '1',
     authorId: 'user_123', // 假设帖子作者的 ID
     title: '示例帖子标题',

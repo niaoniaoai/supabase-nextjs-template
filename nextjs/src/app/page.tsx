@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '../../supabase-expo-template/lib/supabase';
 
 interface Post {
   id: string;

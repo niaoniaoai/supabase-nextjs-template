@@ -89,10 +89,10 @@ export default function ForumHome() {
             </>
           ) : (
             <Link
-              href="/login"
+              href="/auth/login"
               className="px-4 py-2 bg-zinc-800 text-white rounded font-medium text-sm"
             >
-              去登录
+              登录
             </Link>
           )}
         </div>

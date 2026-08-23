@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 interface Category {
   id: number
@@ -172,9 +173,9 @@ export default function NewPostPage() {
         </div>
 
         <div className="flex justify-end gap-3">
-          <a href="/" className="px-4 py-2 border rounded text-sm">
+          <Link href="/" className="px-4 py-2 border rounded text-sm">
             取消
-          </a>
+          </Link>
           <button
             type="submit"
             disabled={loading || uploading}

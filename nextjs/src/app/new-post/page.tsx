@@ -47,18 +47,17 @@ export default function NewPostPage() {
       const { data } = supabase.storage.from('images').getPublicUrl(filePath);
       if (data?.publicUrl) {
         setImageUrl(data.publicUrl);
-        // 自动插入 Markdown 格式图片到内容中
         setContent((prev) => `${prev}\n![图片](${data.publicUrl})\n`);
       }
     } catch (err: unknown) {
       console.error('图片上传失败:', err);
-      alert('图片上传失败，请检查 Supabase Storage 的 Bucket 权限');
+      alert('图片上传失败，请检查 Supabase Storage 权限');
     } finally {
       setUploading(false);
     }
   };
 
-  // 3. 提交帖子
+  // 3. 提交帖子（修复字段名：使用 user_id 代替 author_id）
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -73,17 +72,20 @@ export default function NewPostPage() {
     }
 
     try {
-      const { error } = await supabase.from('posts').insert([
-        {
-          title,
-          category,
-          content,
-          image_url: imageUrl || null,
-          author_id: user.id,
-          author_name: user.name || '艾先生',
-          is_pinned: false,
-        },
-      ]);
+      // 构建插入对象，避免提交无效/不匹配的字段
+      const postData: Record<string, unknown> = {
+        title,
+        category,
+        content,
+        user_id: user.id, // ✅ 使用 Supabase 表中实际的字段 user_id
+        author_name: user.name || '艾先生',
+      };
+
+      if (imageUrl) {
+        postData.image_url = imageUrl;
+      }
+
+      const { error } = await supabase.from('posts').insert([postData]);
 
       if (error) {
         alert(`发布失败: ${error.message}`);
@@ -105,26 +107,24 @@ export default function NewPostPage() {
       <h1 className="text-2xl font-bold mb-6 text-gray-800">发布新帖子</h1>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* 标题 */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">文章标题</label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full border p-2.5 rounded outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border p-2.5 rounded outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             placeholder="请输入标题"
             required
           />
         </div>
 
-        {/* 分类 */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">文章分类</label>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="w-full border p-2.5 rounded outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border p-2.5 rounded outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
           >
             <option value="AI与机器学习">AI与机器学习</option>
             <option value="自媒体与视觉">自媒体与视觉</option>
@@ -132,14 +132,13 @@ export default function NewPostPage() {
           </select>
         </div>
 
-        {/* 工具栏：加粗、插入链接、上传图片 */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">内容与排版</label>
           <div className="flex items-center gap-2 mb-2 p-2 bg-gray-50 border rounded-t border-b-0">
             <button
               type="button"
               onClick={() => insertText('**', '**')}
-              className="px-2.5 py-1 bg-white border rounded text-xs font-bold hover:bg-gray-100"
+              className="px-2.5 py-1 bg-white border rounded text-xs font-bold hover:bg-gray-100 text-gray-800"
               title="加粗"
             >
               B (加粗)
@@ -168,16 +167,15 @@ export default function NewPostPage() {
             id="post-content"
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            className="w-full border p-3 rounded-b h-48 outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="写点什么吧...支持 Markdown 语法与上方格式化工具"
+            className="w-full border p-3 rounded-b h-48 outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+            placeholder="写点什么吧..."
             required
           />
         </div>
 
-        {/* 图片预览 */}
         {imageUrl && (
           <div className="p-2 border rounded bg-gray-50">
-            <span className="text-xs text-gray-500 block mb-1">已被插入的主图预览：</span>
+            <span className="text-xs text-gray-500 block mb-1">已插入的图片预览：</span>
             <img src={imageUrl} alt="预览图片" className="max-h-40 rounded object-cover" />
           </div>
         )}

@@ -1,18 +1,11 @@
-import type { Metadata } from "next";
-import "./globals.css";
-import { Analytics } from '@vercel/analytics/next';
-import CookieConsent from "@/components/Cookies";
-import { GoogleAnalytics } from '@next/third-parties/google'
-
+import type { Metadata } from 'next';
+import Header from '@/components/Header';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: process.env.NEXT_PUBLIC_PRODUCTNAME,
-  description: "The best way to build your SaaS product.",
+  title: '艾先生的内容社区',
+  description: '基于 Next.js 与 Supabase 的全栈技术社区',
 };
-
-export default function RootLayout({
- import Header from '@/components/Header';
-import './globals.css';
 
 export default function RootLayout({
   children,
@@ -21,36 +14,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh">
-      <body className="bg-gray-50 min-h-screen">
-        {/* 全局顶部导航栏 */}
+      <body className="bg-gray-50 min-h-screen text-gray-900 antialiased">
         <Header />
-        
-        {/* 页面主体内容 */}
         {children}
       </body>
-    </html>
-  );
-}
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  let theme = process.env.NEXT_PUBLIC_THEME
-  if(!theme) {
-    theme = "theme-sass3"
-  }
-  const gaID = process.env.NEXT_PUBLIC_GOOGLE_TAG;
-  return (
-    <html lang="en">
-    <body className={theme}>
-      {children}
-      <Analytics />
-      <CookieConsent />
-      { gaID && (
-          <GoogleAnalytics gaId={gaID}/>
-      )}
-
-    </body>
     </html>
   );
 }

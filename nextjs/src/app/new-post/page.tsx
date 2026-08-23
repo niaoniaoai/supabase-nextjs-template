@@ -13,7 +13,7 @@ export default function NewPostPage() {
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // 1. 快捷格式化文本工具（加粗、链接）
+  // 1. 快捷格式化文本工具（加粗、插入链接）
   const insertText = (before: string, after: string = '') => {
     const textarea = document.getElementById('post-content') as HTMLTextAreaElement;
     if (!textarea) return;
@@ -47,6 +47,7 @@ export default function NewPostPage() {
       const { data } = supabase.storage.from('images').getPublicUrl(filePath);
       if (data?.publicUrl) {
         setImageUrl(data.publicUrl);
+        // 自动将 Markdown 格式图片插入文本内容区
         setContent((prev) => `${prev}\n![图片](${data.publicUrl})\n`);
       }
     } catch (err: unknown) {
@@ -57,7 +58,7 @@ export default function NewPostPage() {
     }
   };
 
-  // 3. 提交帖子（修复字段名：使用 user_id 代替 author_id）
+  // 3. 提交帖子（严格按照 posts 表结构插入数据）
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -72,20 +73,24 @@ export default function NewPostPage() {
     }
 
     try {
-      // 构建插入对象，避免提交无效/不匹配的字段
-      const postData: Record<string, unknown> = {
+      const payload: {
+        title: string;
+        content: string;
+        category: string;
+        user_id: string;
+        image_url?: string;
+      } = {
         title,
-        category,
         content,
-        user_id: user.id, // ✅ 使用 Supabase 表中实际的字段 user_id
-        author_name: user.name || '艾先生',
+        category,
+        user_id: user.id,
       };
 
       if (imageUrl) {
-        postData.image_url = imageUrl;
+        payload.image_url = imageUrl;
       }
 
-      const { error } = await supabase.from('posts').insert([postData]);
+      const { error } = await supabase.from('posts').insert([payload]);
 
       if (error) {
         alert(`发布失败: ${error.message}`);
@@ -107,6 +112,7 @@ export default function NewPostPage() {
       <h1 className="text-2xl font-bold mb-6 text-gray-800">发布新帖子</h1>
 
       <form onSubmit={handleSubmit} className="space-y-5">
+        {/* 文章标题 */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">文章标题</label>
           <input
@@ -119,6 +125,7 @@ export default function NewPostPage() {
           />
         </div>
 
+        {/* 文章分类 */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">文章分类</label>
           <select
@@ -132,6 +139,7 @@ export default function NewPostPage() {
           </select>
         </div>
 
+        {/* 工具栏与文本区域 */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">内容与排版</label>
           <div className="flex items-center gap-2 mb-2 p-2 bg-gray-50 border rounded-t border-b-0">
@@ -173,6 +181,7 @@ export default function NewPostPage() {
           />
         </div>
 
+        {/* 图片预览 */}
         {imageUrl && (
           <div className="p-2 border rounded bg-gray-50">
             <span className="text-xs text-gray-500 block mb-1">已插入的图片预览：</span>
@@ -180,6 +189,7 @@ export default function NewPostPage() {
           </div>
         )}
 
+        {/* 提交按钮 */}
         <button
           type="submit"
           disabled={submitting || uploading}

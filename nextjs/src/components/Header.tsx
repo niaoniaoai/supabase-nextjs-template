@@ -54,7 +54,7 @@ export default function Header() {
             <>
               {/* 发布帖子入口 */}
               <Link
-                href="/posts/create"
+                href="/new-post"
                 className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition"
               >
                 + 发布帖子

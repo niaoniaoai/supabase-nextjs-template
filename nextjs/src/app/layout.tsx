@@ -11,6 +11,26 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({
+ import Header from '@/components/Header';
+import './globals.css';
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="zh">
+      <body className="bg-gray-50 min-h-screen">
+        {/* 全局顶部导航栏 */}
+        <Header />
+        
+        {/* 页面主体内容 */}
+        {children}
+      </body>
+    </html>
+  );
+}
   children,
 }: Readonly<{
   children: React.ReactNode;

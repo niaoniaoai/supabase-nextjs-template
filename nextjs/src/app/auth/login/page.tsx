@@ -53,10 +53,14 @@ export default function LoginPage() {
       // 4. 跳转首页并刷新路由
       router.push('/');
       router.refresh();
-    } catch (err: any) {
-      console.error('登录异常:', err);
-      setError(err.message || '登录失败');
-    } finally {
+} catch (err: unknown) { // ✅ 改为 unknown 并进行类型断言
+  console.error('登录异常:', err);
+  if (err instanceof Error) {
+    setError(err.message);
+  } else {
+    setError('发生未知错误');
+  }
+}finally {
       setLoading(false);
     }
   };

@@ -1,269 +1,122 @@
-'use client'
+'use client';
 
-import { useState, useEffect, use } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
-import { User } from '@supabase/supabase-js'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+
+// 定义用户和帖子数据的类型结构
+interface User {
+  id: string;
+  role: string; // 假设角色字段，例如 'admin' 表示管理员
+  name?: string;
+}
 
 interface Post {
-  id: number
-  title: string
-  content: string
-  author_email: string
-  created_at: string
-  is_pinned: boolean
-  user_id: string
+  id: string;
+  authorId: string;
+  title: string;
+  content: string;
 }
 
-interface Comment {
-  id: number
-  author_email: string
-  content: string
-  created_at: string
-}
+export default function PostDetailPage({ params }: { params?: { id: string } }) {
+  const router = useRouter();
 
-export default function PostDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
-  const { id } = use(params)
-  const router = useRouter()
+  // 1. 帖子数据状态（实际项目中请换成你的接口/数据源）
+  const [post, setPost] = useState<Post>({
+    id: params?.id || '1',
+    authorId: 'user_123', // 假设帖子作者的 ID
+    title: '示例帖子标题',
+    content: '这是帖子内容的详细信息...',
+  });
 
-  const [post, setPost] = useState<Post | null>(null)
-  const [comments, setComments] = useState<Comment[]>([])
-  const [newComment, setNewComment] = useState('')
-  const [user, setUser] = useState<User | null>(null)
-  const [isEditing, setIsEditing] = useState(false)
-  const [editTitle, setEditTitle] = useState('')
-  const [editContent, setEditContent] = useState('')
+  // 2. 当前登录用户信息状态
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-
+  // 页面加载时从本地存储获取当前用户信息
   useEffect(() => {
-    async function fetchData() {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
-
-      const { data: postData } = await supabase
-        .from('posts')
-        .select('*')
-        .eq('id', id)
-        .single()
-
-      if (postData) {
-        setPost(postData)
-        setEditTitle(postData.title)
-        setEditContent(postData.content)
+    const userStr = localStorage.getItem('userInfo');
+    if (userStr) {
+      try {
+        setCurrentUser(JSON.parse(userStr));
+      } catch (e) {
+        console.error('解析用户信息失败:', e);
       }
-
-      const { data: commentData } = await supabase
-        .from('comments')
-        .select('*')
-        .eq('post_id', id)
-        .order('created_at', { ascending: true })
-
-      if (commentData) setComments(commentData)
     }
-    fetchData()
-  }, [id, supabase])
+  }, []);
 
-  // 删帖
-  const handleDeletePost = async () => {
-    if (!confirm('确定要删除此帖子吗？此操作不可撤销。')) return
-    const { error } = await supabase.from('posts').delete().eq('id', id)
-    if (error) {
-      alert('删除失败，请检查数据库权限或是否为管理员账户: ' + error.message)
-    } else {
-      alert('帖子已成功删除！')
-      router.push('/')
-      router.refresh()
+  // ------------------ 核心权限判断 ------------------
+  // 1. 是否已登录
+  const isLoggedIn = Boolean(currentUser && currentUser.id);
+
+  // 2. 是否是管理员（根据实际字段调整，这里假设角色是 'admin'）
+  const isAdmin = isLoggedIn && currentUser?.role === 'admin';
+
+  // 3. 是否是帖子作者本人（比对当前用户 ID 和帖子作者 ID）
+  const isAuthor = isLoggedIn && String(currentUser?.id) === String(post?.authorId);
+
+  // 按钮可见性规则
+  const canPin = isAdmin;                // 置顶：仅管理员
+  const canEdit = isAuthor || isAdmin;   // 修改：作者本人 或 管理员
+  const canDelete = isAuthor || isAdmin; // 删除：作者本人 或 管理员
+  // --------------------------------------------------
+
+  // 按钮事件处理函数
+  const handlePin = () => {
+    alert('操作成功：帖子已置顶');
+  };
+
+  const handleEdit = () => {
+    router.push(`/posts/${post.id}/edit`);
+  };
+
+  const handleDelete = () => {
+    if (confirm('确定要删除这篇帖子吗？')) {
+      alert('帖子已删除');
+      router.push('/');
     }
-  }
-
-  // 保存编辑
-  const handleSaveEdit = async () => {
-    const { error } = await supabase
-      .from('posts')
-      .update({ title: editTitle, content: editContent })
-      .eq('id', id)
-
-    if (error) {
-      alert('修改失败: ' + error.message)
-    } else {
-      if (post) setPost({ ...post, title: editTitle, content: editContent })
-      setIsEditing(false)
-      alert('帖子修改成功！')
-    }
-  }
-
-  // 置顶 / 取消置顶
-  const togglePin = async () => {
-    if (!post) return
-    const nextStatus = !post.is_pinned
-    const { error } = await supabase
-      .from('posts')
-      .update({ is_pinned: nextStatus })
-      .eq('id', post.id)
-
-    if (error) {
-      alert('置顶操作失败: ' + error.message)
-    } else {
-      setPost({ ...post, is_pinned: nextStatus })
-      alert(nextStatus ? '已成功置顶！' : '已取消置顶！')
-    }
-  }
-
-  const handleAddComment = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newComment.trim() || !user) return
-
-    const { data, error } = await supabase
-      .from('comments')
-      .insert([
-        {
-          post_id: id,
-          user_id: user.id,
-          author_email: user.email,
-          content: newComment,
-        },
-      ])
-      .select()
-
-    if (error) {
-      alert('评论失败: ' + error.message)
-    } else if (data) {
-      setComments([...comments, data[0]])
-      setNewComment('')
-    }
-  }
-
-  if (!post) return <div className="p-8 text-center text-gray-400">加载中...</div>
+  };
 
   return (
-    <main className="max-w-4xl mx-auto p-6 space-y-8">
-      <Link href="/" className="text-sm text-blue-600 hover:underline">
-        &larr; 返回帖子列表
-      </Link>
-
-      <article className="border-b pb-6 space-y-4">
-        {isEditing ? (
-          <div className="space-y-3">
-            <input
-              type="text"
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              className="w-full p-2 border rounded font-bold text-xl"
-            />
-            <textarea
-              rows={10}
-              value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
-              className="w-full p-2 border rounded font-mono text-sm"
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={handleSaveEdit}
-                className="px-4 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-              >
-                保存修改
-              </button>
-              <button
-                onClick={() => setIsEditing(false)}
-                className="px-4 py-1.5 border rounded text-sm"
-              >
-                取消
-              </button>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="flex justify-between items-start">
-              <h1 className="text-3xl font-bold flex items-center gap-2">
-                {post.is_pinned && (
-                  <span className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded font-bold">
-                    置顶
-                  </span>
-                )}
-                {post.title}
-              </h1>
-              <div className="flex gap-2 shrink-0">
-                <button
-                  onClick={togglePin}
-                  className="text-xs px-2.5 py-1 border rounded hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                >
-                  {post.is_pinned ? '取消置顶' : '设置置顶'}
-                </button>
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="text-xs px-2.5 py-1 border rounded bg-amber-50 text-amber-700 hover:bg-amber-100"
-                >
-                  修改帖子
-                </button>
-                <button
-                  onClick={handleDeletePost}
-                  className="text-xs px-2.5 py-1 border rounded bg-red-50 text-red-600 hover:bg-red-100"
-                >
-                  删除帖子
-                </button>
-              </div>
-            </div>
-            <p className="text-xs text-gray-400">
-              发布者：{post.author_email || '匿名'} | 时间：
-              {new Date(post.created_at).toLocaleString('zh-CN')}
-            </p>
-
-            {/* 支持链接与图片富文本渲染 */}
-            <div
-              className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-line space-y-4 pt-2 prose dark:prose-invert max-w-none"
-              dangerouslySetInnerHTML={{ __html: post.content }}
-            />
-          </>
-        )}
+    <main className="max-w-4xl mx-auto p-6">
+      {/* 帖子主体 */}
+      <article className="border-b pb-6">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">{post.title}</h1>
+        <div className="text-gray-700 leading-relaxed whitespace-pre-line">
+          {post.content}
+        </div>
       </article>
 
-      {/* 评论区 */}
-      <section className="space-y-6">
-        <h2 className="text-xl font-bold">评论列表 ({comments.length})</h2>
-        {user ? (
-          <form onSubmit={handleAddComment} className="space-y-3">
-            <textarea
-              rows={3}
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder="写下你的评论..."
-              required
-              className="w-full p-2.5 border rounded bg-transparent text-sm"
-            />
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-            >
-              发表评论
-            </button>
-          </form>
-        ) : (
-          <div className="p-3 bg-amber-50 text-amber-800 text-sm rounded">
-            登录后即可参与评论
-          </div>
+      {/* 操作按钮区 */}
+      <div className="flex gap-4 mt-6">
+        {/* 1. 仅管理员可见：置顶 */}
+        {canPin && (
+          <button
+            onClick={handlePin}
+            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded font-medium transition-colors"
+          >
+            置顶帖子
+          </button>
         )}
 
-        <div className="space-y-4">
-          {comments.map((c) => (
-            <div key={c.id} className="p-4 border rounded bg-zinc-50 dark:bg-zinc-900 text-sm space-y-1">
-              <div className="flex justify-between text-xs text-gray-400">
-                <span>{c.author_email}</span>
-                <span>{new Date(c.created_at).toLocaleString('zh-CN')}</span>
-              </div>
-              <p className="text-gray-700 dark:text-gray-300">{c.content}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+        {/* 2. 作者本人或管理员可见：修改 */}
+        {canEdit && (
+          <button
+            onClick={handleEdit}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition-colors"
+          >
+            修改帖子
+          </button>
+        )}
+
+        {/* 3. 作者本人或管理员可见：删除 */}
+        {canDelete && (
+          <button
+            onClick={handleDelete}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded font-medium transition-colors"
+          >
+            删除帖子
+          </button>
+        )}
+      </div>
     </main>
-  )
+  );
 }

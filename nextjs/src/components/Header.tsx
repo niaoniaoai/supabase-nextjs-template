@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient'; // 根据你项目的真实 Supabase 客户端路径调整
+import { supabase } from '../../supabase-expo-template/lib/supabase';// 根据你项目的真实 Supabase 客户端路径调整
 
 interface User {
   id: string;

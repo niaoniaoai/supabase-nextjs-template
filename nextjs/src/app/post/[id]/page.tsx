@@ -1,22 +1,17 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
-
-interface User {
-  id: string;
-  role: string;
-  name?: string;
-}
+import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 
 interface Post {
   id: string;
-  author_id: string;
-  author_name?: string;
   title: string;
   content: string;
-  is_pinned?: boolean;
+  category?: string;
+  author_name?: string;
+  image_url?: string;
+  created_at?: string;
 }
 
 interface PageProps {
@@ -24,27 +19,15 @@ interface PageProps {
 }
 
 export default function PostDetailPage({ params }: PageProps) {
-  const router = useRouter();
   const resolvedParams = use(params);
   const postId = resolvedParams?.id;
 
   const [post, setPost] = useState<Post | null>(null);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. 获取本地缓存的 Supabase 用户身份及角色
-    const userStr = localStorage.getItem('userInfo');
-    if (userStr) {
-      try {
-        setCurrentUser(JSON.parse(userStr));
-      } catch (e) {
-        console.error('解析用户信息失败:', e);
-      }
-    }
-
-    // 2. 从 Supabase 数据库拉取真实帖子详情数据
-    const fetchPostFromSupabase = async () => {
+    const fetchPost = async () => {
+      if (!postId) return;
       setLoading(true);
       try {
         const { data, error } = await supabase
@@ -54,143 +37,67 @@ export default function PostDetailPage({ params }: PageProps) {
           .single();
 
         if (error) {
-          console.error('获取帖子失败:', error.message);
-        } else if (data) {
-          setPost({
-            id: data.id,
-            author_id: data.author_id || data.user_id,
-            author_name: data.author_name || '艾先生',
-            title: data.title,
-            content: data.content,
-            is_pinned: data.is_pinned || false,
-          });
+          console.error('获取帖子详情失败:', error.message);
+        } else {
+          setPost(data);
         }
-      } catch (err) {
-        console.error('网络或查询错误:', err);
+      } catch (err: unknown) {
+        console.error('详情页请求异常:', err);
       } finally {
         setLoading(false);
       }
     };
 
-    if (postId) fetchPostFromSupabase();
+    fetchPost();
   }, [postId]);
 
-  // ------------------ 权限逻辑判断 ------------------
-  const isLoggedIn = Boolean(currentUser && currentUser.id);
-  // 是否是在 Supabase 中配置的管理员 role === 'admin'
-  const isAdmin = isLoggedIn && currentUser?.role === 'admin';
-  // 是否是当前帖子作者本人
-  const isAuthor =
-    isLoggedIn && Boolean(post) && String(currentUser?.id) === String(post?.author_id);
-
-  // 按钮可见性规则
-  const canPin = isAdmin;                // 置顶：仅管理员
-  const canEdit = isAuthor || isAdmin;   // 修改：作者本人 或 管理员
-  const canDelete = isAuthor || isAdmin; // 删除：作者本人 或 管理员
-  // --------------------------------------------------
-
-  // 1. Supabase 数据库置顶/取消置顶操作
-  const handlePin = async () => {
-    if (!post) return;
-    const nextPinnedStatus = !post.is_pinned;
-
-    const { error } = await supabase
-      .from('posts')
-      .update({ is_pinned: nextPinnedStatus })
-      .eq('id', post.id);
-
-    if (error) {
-      alert(`置顶失败: ${error.message}`);
-    } else {
-      setPost({ ...post, is_pinned: nextPinnedStatus });
-      alert(nextPinnedStatus ? '帖子已在数据库中成功置顶！' : '已取消置顶！');
-    }
-  };
-
-  // 2. 编辑操作跳转
-  const handleEdit = () => {
-    router.push(`/posts/${postId}/edit`);
-  };
-
-  // 3. Supabase 数据库删除操作
-  const handleDelete = async () => {
-    if (!confirm('确定要从数据库中彻底删除这篇帖子吗？')) return;
-
-    const { error } = await supabase
-      .from('posts')
-      .delete()
-      .eq('id', postId);
-
-    if (error) {
-      alert(`删除失败: ${error.message}`);
-    } else {
-      alert('帖子已从数据库成功删除');
-      router.push('/');
-      router.refresh();
-    }
-  };
-
   if (loading) {
-    return <div className="max-w-4xl mx-auto p-12 text-center text-gray-500">正在从 Supabase 读取帖子...</div>;
+    return <div className="text-center py-16 text-gray-500">正在加载文章内容...</div>;
   }
 
   if (!post) {
-    return <div className="max-w-4xl mx-auto p-12 text-center text-red-500">未在数据库中找到该帖子</div>;
+    return (
+      <div className="text-center py-16">
+        <h2 className="text-xl font-bold text-gray-700 mb-2">404 - 未找到该帖子</h2>
+        <p className="text-gray-500 mb-4">该帖子可能已被删除或路径不正确</p>
+        <Link href="/" className="text-blue-600 hover:underline">
+          返回首页
+        </Link>
+      </div>
+    );
   }
 
   return (
-    <main className="max-w-4xl mx-auto p-6">
-      {/* 置顶标识 */}
-      {post.is_pinned && (
-        <span className="inline-block mb-3 px-3 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full">
-          📌 已置顶
+    <main className="max-w-3xl mx-auto mt-8 p-6 bg-white rounded-lg border shadow-sm">
+      <Link href="/" className="inline-block mb-4 text-sm text-blue-600 hover:underline">
+        ← 返回帖子列表
+      </Link>
+
+      <div className="flex items-center gap-2 mb-3">
+        {post.category && (
+          <span className="px-2.5 py-0.5 bg-blue-50 text-blue-600 text-xs font-medium rounded">
+            {post.category}
+          </span>
+        )}
+        <span className="text-xs text-gray-400">
+          作者：{post.author_name || '艾先生'}
         </span>
+      </div>
+
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">{post.title}</h1>
+
+      {post.image_url && (
+        <div className="mb-6">
+          <img
+            src={post.image_url}
+            alt={post.title}
+            className="w-full max-h-96 object-cover rounded-lg"
+          />
+        </div>
       )}
 
-      {/* 帖子真实内容 */}
-      <article className="border-b border-gray-200 pb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-3">{post.title}</h1>
-        <div className="text-sm text-gray-500 mb-6 flex gap-4">
-          <span>作者: {post.author_name}</span>
-          <span>帖子 ID: {post.id}</span>
-        </div>
-        <div className="text-gray-800 leading-relaxed whitespace-pre-line text-lg">
-          {post.content}
-        </div>
-      </article>
-
-      {/* 权限控制按钮组 */}
-      <div className="flex gap-4 mt-6">
-        {canPin && (
-          <button
-            onClick={handlePin}
-            className={`px-4 py-2 text-white rounded font-medium transition ${
-              post.is_pinned
-                ? 'bg-gray-500 hover:bg-gray-600'
-                : 'bg-amber-500 hover:bg-amber-600'
-            }`}
-          >
-            {post.is_pinned ? '取消置顶' : '置顶帖子'}
-          </button>
-        )}
-
-        {canEdit && (
-          <button
-            onClick={handleEdit}
-            className="px-4 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 transition"
-          >
-            修改帖子
-          </button>
-        )}
-
-        {canDelete && (
-          <button
-            onClick={handleDelete}
-            className="px-4 py-2 bg-red-600 text-white rounded font-medium hover:bg-red-700 transition"
-          >
-            删除帖子
-          </button>
-        )}
+      <div className="prose max-w-none text-gray-800 leading-relaxed whitespace-pre-wrap">
+        {post.content}
       </div>
     </main>
   );

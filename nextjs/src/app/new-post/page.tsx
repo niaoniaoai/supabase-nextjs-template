@@ -42,7 +42,7 @@ export default function NewPostPage() {
     init()
   }, [router, supabase])
 
-  // 上传图片到 Supabase Storage 存储桶
+  // 上传图片到 Supabase Storage
   const uploadImageFile = async (file: File) => {
     try {
       setUploading(true)
@@ -60,7 +60,6 @@ export default function NewPostPage() {
         .from('forum-images')
         .getPublicUrl(filePath)
 
-      // 自动追加图片标签至正文
       setContent((prev) => prev + `\n<img src="${publicUrl}" alt="图片" class="max-w-full rounded-lg my-2" />\n`)
     } catch (err: unknown) {
       const error = err as Error
@@ -70,7 +69,19 @@ export default function NewPostPage() {
     }
   }
 
-  // 拖拽处理
+  // 快捷格式化工具
+  const insertFormat = (tag: string) => {
+    if (tag === 'b') setContent((prev) => prev + '<b>加粗文字</b>')
+    if (tag === 'h2') setContent((prev) => prev + '\n<h2>二级标题</h2>\n')
+    if (tag === 'a') {
+      const url = prompt('请输入跳转 URL 链接:', 'https://')
+      const text = prompt('请输入链接文本描述:', '点击链接')
+      if (url && text) {
+        setContent((prev) => prev + `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">${text}</a>`)
+      }
+    }
+  }
+
   const handleDrop = (e: React.DragEvent<HTMLTextAreaElement>) => {
     e.preventDefault()
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
@@ -142,23 +153,46 @@ export default function NewPostPage() {
         </div>
 
         <div>
-          <div className="flex justify-between items-center mb-1">
+          <div className="flex justify-between items-center mb-2">
             <label className="block text-sm font-medium">
               帖子正文 {uploading && <span className="text-blue-600 text-xs">(上传图片中...)</span>}
             </label>
-            <label className="cursor-pointer px-2 py-1 bg-zinc-100 dark:bg-zinc-800 text-xs rounded hover:bg-zinc-200">
-              📁 点击选择本地图片上传
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  if (e.target.files && e.target.files[0]) {
-                    uploadImageFile(e.target.files[0])
-                  }
-                }}
-              />
-            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => insertFormat('b')}
+                className="px-2 py-1 bg-zinc-100 dark:bg-zinc-800 text-xs rounded hover:bg-zinc-200 font-bold"
+              >
+                B 加粗
+              </button>
+              <button
+                type="button"
+                onClick={() => insertFormat('h2')}
+                className="px-2 py-1 bg-zinc-100 dark:bg-zinc-800 text-xs rounded hover:bg-zinc-200"
+              >
+                H2 标题
+              </button>
+              <button
+                type="button"
+                onClick={() => insertFormat('a')}
+                className="px-2 py-1 bg-zinc-100 dark:bg-zinc-800 text-xs rounded hover:bg-zinc-200 text-blue-600"
+              >
+                🔗 插入链接
+              </button>
+              <label className="cursor-pointer px-2 py-1 bg-zinc-100 dark:bg-zinc-800 text-xs rounded hover:bg-zinc-200">
+                📁 插入图片
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      uploadImageFile(e.target.files[0])
+                    }
+                  }}
+                />
+              </label>
+            </div>
           </div>
           <textarea
             rows={10}
@@ -167,7 +201,7 @@ export default function NewPostPage() {
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleDrop}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="撰写你的讨论内容...（支持直接拖拽图片文件到此处上传）"
+            placeholder="撰写你的讨论内容...（支持拖拽图片上传、点击上方工具栏添加富文本格式与超链接）"
             className="w-full p-2.5 border rounded bg-transparent font-mono text-sm"
           />
         </div>

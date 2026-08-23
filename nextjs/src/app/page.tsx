@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@/utils/supabase/client'
+import { createBrowserClient } from '@supabase/ssr'
 
 interface Post {
   id: number
@@ -18,7 +18,11 @@ export default function ForumHome() {
   const [loading, setLoading] = useState(false)
   const [user, setUser] = useState<any>(null)
 
-  const supabase = createClient()
+  // 直接在前端创建 Supabase 客户端
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
   // 获取当前登录状态与帖子列表
   useEffect(() => {

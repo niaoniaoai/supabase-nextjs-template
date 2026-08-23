@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { supabase } from '../../supabase-expo-template/lib/supabase';
+import { supabase } from '@/lib/supabase'; // ✅ 统一使用 src/lib/supabase.ts 路径
 
 interface Post {
   id: string;
@@ -21,11 +21,11 @@ export default function HomePage() {
     const fetchPosts = async () => {
       setLoading(true);
       try {
-        // 从 Supabase 数据库按置顶状态和创建时间拉取帖子
+        // 从 Supabase 数据库拉取帖子（优先按置顶状态，其次按创建时间降序）
         const { data, error } = await supabase
           .from('posts')
           .select('*')
-          .order('is_pinned', { ascending: false }) // 置顶的排在前面
+          .order('is_pinned', { ascending: false })
           .order('created_at', { ascending: false });
 
         if (error) {
@@ -34,7 +34,7 @@ export default function HomePage() {
           setPosts(data);
         }
       } catch (err) {
-        console.error('网络或服务异常:', err);
+        console.error('请求异常:', err);
       } finally {
         setLoading(false);
       }
@@ -45,12 +45,14 @@ export default function HomePage() {
 
   return (
     <main className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6 text-gray-800">最新帖子列表</h1>
+      <h1 className="text-2xl font-bold mb-6 text-gray-800">最新帖子</h1>
 
       {loading ? (
-        <div className="text-center py-12 text-gray-500">正在从 Supabase 加载帖子...</div>
+        <div className="text-center py-12 text-gray-500">正在加载帖子...</div>
       ) : posts.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">暂无帖子，点击右上角发布第一篇帖子吧！</div>
+        <div className="text-center py-12 text-gray-400">
+          暂无帖子，点击右上角的“+ 发布帖子”开始创作吧！
+        </div>
       ) : (
         <div className="space-y-4">
           {posts.map((post) => (

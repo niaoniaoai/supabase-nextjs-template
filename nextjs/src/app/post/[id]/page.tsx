@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 
 // 定义用户和帖子数据的类型结构
@@ -17,12 +17,20 @@ interface Post {
   content: string;
 }
 
-export default function PostDetailPage({ params }: { params?: { id: string } }) {
-  const router = useRouter();
+// 适配 Next.js 15 的异步 params 类型
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
 
-  // 1. 帖子数据状态（移除了未使用的 setPost）
+export default function PostDetailPage({ params }: PageProps) {
+  const router = useRouter();
+  
+  // 使用 React.use() 解包异步的 params
+  const resolvedParams = use(params);
+
+  // 1. 帖子数据状态
   const [post] = useState<Post>({
-    id: params?.id || '1',
+    id: resolvedParams?.id || '1',
     authorId: 'user_123', // 假设帖子作者的 ID
     title: '示例帖子标题',
     content: '这是帖子内容的详细信息...',

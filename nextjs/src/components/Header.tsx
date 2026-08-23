@@ -65,7 +65,8 @@ export default function Header() {
                 <span className="text-sm font-medium text-gray-700">
                   {currentUser.name}
                   <span className="ml-1 text-xs text-gray-400">
-                    ({currentUser.type === 'administrator' ? '管理员' : '普通用户'})
+// 加上 ?. 变成 currentUser?.type
+({currentUser?.type === 'administrator' ? '管理员' : '普通用户'})
                   </span>
                 </span>
                 <button

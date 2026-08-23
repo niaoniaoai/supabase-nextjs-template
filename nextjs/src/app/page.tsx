@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
+import { User } from '@supabase/supabase-js'
 
 interface Post {
   id: number
@@ -16,9 +17,9 @@ export default function ForumHome() {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [loading, setLoading] = useState(false)
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
 
-  // 直接在前端创建 Supabase 客户端
+  // 创建 Supabase 客户端
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -42,12 +43,12 @@ export default function ForumHome() {
       }
     }
     fetchData()
-  }, [])
+  }, [supabase])
 
   // 发布新帖子
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim() || !content.trim()) return
+    if (!title.trim() || !content.trim() || !user) return
 
     setLoading(true)
     const { data, error } = await supabase
